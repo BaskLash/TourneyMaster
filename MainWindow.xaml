@@ -1,503 +1,249 @@
-﻿<Window x:Class="Turnierspielplan.MainWindow"
+<Window x:Class="Turnierspielplan.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Turnierspielplan"
         mc:Ignorable="d"
-        Title="Turnierspielplan" Height="882" Width="1300">
-  <Grid>
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="0.3*"/>
-      <ColumnDefinition Width="0.1*"/>
-      <ColumnDefinition Width="0.5*"/>
-      <ColumnDefinition Width="0.5*"/>
-      <ColumnDefinition Width="0.5*"/>
-    </Grid.ColumnDefinitions>
+        Title="Turnierspielplan" Height="882" Width="1300"
+        Background="{StaticResource BackgroundBrush}"
+        TextOptions.TextFormattingMode="Ideal"
+        UseLayoutRounding="True">
+    <Window.Resources>
+        <!-- Template shared by every slot's ComboBox -->
+        <DataTemplate x:Key="TeamItemTemplate">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Image Grid.Column="0"
+                       Source="{Binding ImagePath}"
+                       Width="28" Height="28"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding Name}"
+                           FontSize="17"
+                           FontWeight="Medium"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0"/>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding StatusText}"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           VerticalAlignment="Center"
+                           Margin="8,0,6,0"/>
+            </Grid>
+        </DataTemplate>
 
-    <Grid.RowDefinitions>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="1*"/>
-    </Grid.RowDefinitions>
-    <Label Content="Turnierplan" Grid.Column="2" HorizontalAlignment="Left" Margin="256,4,0,0" VerticalAlignment="Top" FontSize="30" Grid.ColumnSpan="2"/>
+        <!-- Container style: unavailable items are disabled but visible -->
+        <Style x:Key="TeamSlotItemContainerStyle" TargetType="ComboBoxItem"
+               BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+            <Setter Property="IsEnabled" Value="{Binding IsAvailable}"/>
+        </Style>
+    </Window.Resources>
 
-    <Rectangle Grid.Row="1" Grid.ColumnSpan="2" Fill="AliceBlue" />
-    <ComboBox x:Name="Mannschaft1" SelectedValuePath="Content" Grid.Row="1" Grid.Column="0" Margin="5" SelectionChanged="Mannschaft1_SelectionChanged">
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image x:Name="imgFirst" Source="/Turnierspielplan;component/images/barca.png" Width="30" />
-          <TextBlock x:Name="txtFirst" Foreground="Red" FontSize="20" Margin="8,0,0,0">Barcelona</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/real.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Real Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/bayern.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Bayern Munich</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/paris.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Paris Saint-Germain</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/atletico.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Atletico Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/juventus.jpg" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Juventus</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/mancity.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Manchester City</TextBlock>
-        </StackPanel>
-       </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/chelsea.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Chelsea</TextBlock>
-        </StackPanel>
-       </ComboBoxItem>
-    </ComboBox>
-    <Label Content="-" Name="lblTore1" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="0.30*"/>
+            <ColumnDefinition Width="0.08*"/>
+            <ColumnDefinition Width="0.21*"/>
+            <ColumnDefinition Width="0.21*"/>
+            <ColumnDefinition Width="0.20*"/>
+        </Grid.ColumnDefinitions>
 
-    <Rectangle Grid.Row="3" Grid.ColumnSpan="2" Fill="AliceBlue" />
-    <ComboBox x:Name="Mannschaft2" SelectedValuePath="Content" Grid.Row="3" Grid.Column="0" Margin="5" SelectionChanged="Mannschaft2_SelectionChanged">
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/barca.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Barcelona</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/real.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Real Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/bayern.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Bayern Munich</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/paris.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Paris Saint-Germain</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/atletico.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Atletico Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/juventus.jpg" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Juventus</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/mancity.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Manchester City</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/chelsea.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Chelsea</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-    </ComboBox>
-    <Label Content="-" Name="lblTore2" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+        </Grid.RowDefinitions>
 
-    <Rectangle Grid.Row="5" Grid.ColumnSpan="2" Fill="AliceBlue" />
-    <ComboBox x:Name="Mannschaft3" SelectedValuePath="Content" Grid.Row="5" Grid.Column="0" Margin="5" SelectionChanged="Mannschaft3_SelectionChanged">
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/barca.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Barcelona</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/real.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Real Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/bayern.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Bayern Munich</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/paris.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Paris Saint-Germain</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/atletico.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Atletico Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/juventus.jpg" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Juventus</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/mancity.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Manchester City</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/chelsea.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Chelsea</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-    </ComboBox>
-    <Label Content="-" Name="lblTore3" Grid.Row="5" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <!-- ==================== Title ==================== -->
+        <Label Content="Turnierspielplan"
+               Grid.Column="2" Grid.ColumnSpan="3"
+               Style="{StaticResource TitleLabel}"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Center"
+               Margin="12,0,0,0"/>
 
-    <Rectangle Grid.Row="7" Grid.ColumnSpan="2" Fill="AliceBlue" />
-    <ComboBox x:Name="Mannschaft4" SelectedValuePath="Content" Grid.Row="7" Grid.Column="0" Margin="5" SelectionChanged="Mannschaft4_SelectionChanged">
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/barca.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Barcelona</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/real.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Real Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/bayern.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Bayern Munich</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/paris.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Paris Saint-Germain</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/atletico.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Atletico Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/juventus.jpg" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Juventus</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/mancity.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Manchester City</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/chelsea.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Chelsea</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-    </ComboBox>
-    <Label Content="-" Name="lblTore4" Grid.Row="7" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <!-- ==================== Slot 1 ==================== -->
+        <Rectangle Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource SlotCard}"/>
+        <ComboBox x:Name="Mannschaft1" Grid.Row="1" Grid.Column="0" Margin="8"
+                  ItemTemplate="{StaticResource TeamItemTemplate}"
+                  ItemContainerStyle="{StaticResource TeamSlotItemContainerStyle}"
+                  SelectedValuePath="Team.Name"
+                  SelectionChanged="Slot_SelectionChanged"/>
+        <Label Content="-" Name="lblTore1" Style="{StaticResource ScoreLabel}"
+               Grid.Row="1" Grid.Column="1"/>
 
-    <Rectangle Grid.Row="9" Grid.ColumnSpan="2" Fill="AliceBlue" />
-    <ComboBox x:Name="Mannschaft5" SelectedValuePath="Content" Grid.Row="9" Grid.Column="0" Margin="5" SelectionChanged="Mannschaft5_SelectionChanged" >
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/barca.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Barcelona</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/real.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Real Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/bayern.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Bayern Munich</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/paris.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Paris Saint-Germain</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/atletico.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Atletico Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/juventus.jpg" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Juventus</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/mancity.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Manchester City</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/chelsea.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Chelsea</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-    </ComboBox>
-    <Label Content="-" Name="lblTore5" Grid.Row="9" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <!-- ==================== Slot 2 ==================== -->
+        <Rectangle Grid.Row="3" Grid.ColumnSpan="2" Style="{StaticResource SlotCard}"/>
+        <ComboBox x:Name="Mannschaft2" Grid.Row="3" Grid.Column="0" Margin="8"
+                  ItemTemplate="{StaticResource TeamItemTemplate}"
+                  ItemContainerStyle="{StaticResource TeamSlotItemContainerStyle}"
+                  SelectedValuePath="Team.Name"
+                  SelectionChanged="Slot_SelectionChanged"/>
+        <Label Content="-" Name="lblTore2" Style="{StaticResource ScoreLabel}"
+               Grid.Row="3" Grid.Column="1"/>
 
-    <Rectangle Grid.Row="11" Grid.ColumnSpan="2" Fill="AliceBlue" />
-    <ComboBox x:Name="Mannschaft6" SelectedValuePath="Content" Grid.Row="11" Grid.Column="0" Margin="5" SelectionChanged="Mannschaft6_SelectionChanged">
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/barca.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Barcelona</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/real.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Real Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/bayern.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Bayern Munich</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/paris.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Paris Saint-Germain</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/atletico.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Atletico Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/juventus.jpg" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Juventus</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/mancity.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Manchester City</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/chelsea.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Chelsea</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-    </ComboBox>
-    <Label Content="-" Name="lblTore6" Grid.Row="11" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <!-- ==================== Slot 3 ==================== -->
+        <Rectangle Grid.Row="5" Grid.ColumnSpan="2" Style="{StaticResource SlotCard}"/>
+        <ComboBox x:Name="Mannschaft3" Grid.Row="5" Grid.Column="0" Margin="8"
+                  ItemTemplate="{StaticResource TeamItemTemplate}"
+                  ItemContainerStyle="{StaticResource TeamSlotItemContainerStyle}"
+                  SelectedValuePath="Team.Name"
+                  SelectionChanged="Slot_SelectionChanged"/>
+        <Label Content="-" Name="lblTore3" Style="{StaticResource ScoreLabel}"
+               Grid.Row="5" Grid.Column="1"/>
 
-    <Rectangle Grid.Row="13" Grid.ColumnSpan="2" Fill="AliceBlue" />
-    <ComboBox x:Name="Mannschaft7" SelectedValuePath="Content" Grid.Row="13" Grid.Column="0" Margin="5" SelectionChanged="Mannschaft7_SelectionChanged">
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/barca.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Barcelona</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/real.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Real Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/bayern.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Bayern Munich</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/paris.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Paris Saint-Germain</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/atletico.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Atletico Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/juventus.jpg" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Juventus</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/mancity.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Manchester City</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/chelsea.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Chelsea</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-    </ComboBox>
-    <Label Content="-" Name="lblTore7" Grid.Row="13" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <!-- ==================== Slot 4 ==================== -->
+        <Rectangle Grid.Row="7" Grid.ColumnSpan="2" Style="{StaticResource SlotCard}"/>
+        <ComboBox x:Name="Mannschaft4" Grid.Row="7" Grid.Column="0" Margin="8"
+                  ItemTemplate="{StaticResource TeamItemTemplate}"
+                  ItemContainerStyle="{StaticResource TeamSlotItemContainerStyle}"
+                  SelectedValuePath="Team.Name"
+                  SelectionChanged="Slot_SelectionChanged"/>
+        <Label Content="-" Name="lblTore4" Style="{StaticResource ScoreLabel}"
+               Grid.Row="7" Grid.Column="1"/>
 
-    <Rectangle Grid.Row="15" Grid.ColumnSpan="2" Fill="AliceBlue" />
-    <ComboBox x:Name="Mannschaft8" SelectedValuePath="Content" Grid.Row="15" Grid.Column="0" Margin="5" SelectionChanged="Mannschaft8_SelectionChanged">
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/barca.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Barcelona</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/real.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Real Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/bayern.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Bayern Munich</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/paris.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Paris Saint-Germain</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/atletico.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Atletico Madrid</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/juventus.jpg" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Juventus</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/mancity.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Manchester City</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-      <ComboBoxItem>
-        <StackPanel Orientation="Horizontal">
-          <Image Source="/Turnierspielplan;component/images/chelsea.png" Width="30" />
-          <TextBlock Foreground="Red" FontSize="20" Margin="8,0,0,0">Chelsea</TextBlock>
-        </StackPanel>
-      </ComboBoxItem>
-    </ComboBox>
-    <Label Content="-" Name="lblTore8" Grid.Row="15" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <!-- ==================== Slot 5 ==================== -->
+        <Rectangle Grid.Row="9" Grid.ColumnSpan="2" Style="{StaticResource SlotCard}"/>
+        <ComboBox x:Name="Mannschaft5" Grid.Row="9" Grid.Column="0" Margin="8"
+                  ItemTemplate="{StaticResource TeamItemTemplate}"
+                  ItemContainerStyle="{StaticResource TeamSlotItemContainerStyle}"
+                  SelectedValuePath="Team.Name"
+                  SelectionChanged="Slot_SelectionChanged"/>
+        <Label Content="-" Name="lblTore5" Style="{StaticResource ScoreLabel}"
+               Grid.Row="9" Grid.Column="1"/>
 
-    <!-- Erste Runde -->
-    <Rectangle Grid.Row="2" Grid.Column="2" Fill="AliceBlue" />
-    <Label Content="Gewinner Spiel:" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center" Height="32" Margin="10,10,0,12" Width="123" FontSize="15" FontWeight="Bold"/>
-    <Label Content="-" Name="lblErsteGewinner1" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,69,14" Height="30" Width="133"/>
-    <Label Content="-" Name="lblErsteGewinner1Tore" Grid.Column="2" HorizontalAlignment="Left" Margin="288,10,0,0" Grid.Row="2" VerticalAlignment="Top" Height="32" Width="43"/>
+        <!-- ==================== Slot 6 ==================== -->
+        <Rectangle Grid.Row="11" Grid.ColumnSpan="2" Style="{StaticResource SlotCard}"/>
+        <ComboBox x:Name="Mannschaft6" Grid.Row="11" Grid.Column="0" Margin="8"
+                  ItemTemplate="{StaticResource TeamItemTemplate}"
+                  ItemContainerStyle="{StaticResource TeamSlotItemContainerStyle}"
+                  SelectedValuePath="Team.Name"
+                  SelectionChanged="Slot_SelectionChanged"/>
+        <Label Content="-" Name="lblTore6" Style="{StaticResource ScoreLabel}"
+               Grid.Row="11" Grid.Column="1"/>
 
-    <Rectangle Grid.Row="6" Grid.Column="2" Fill="AliceBlue" />
-    <Label Content="Gewinner Spiel:" Grid.Row="6" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center" Height="32" Margin="10,10,0,12" Width="123" FontSize="15" FontWeight="Bold"/>
-    <Label Content="-" Name="lblErsteGewinner2" Grid.Row="6" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,69,14" Height="30" Width="133"/>
-    <Label Content="-" Name="lblErsteGewinner2Tore" Grid.Column="2" HorizontalAlignment="Left" Margin="288,10,0,0" Grid.Row="6" VerticalAlignment="Top" Height="32" Width="43"/>
+        <!-- ==================== Slot 7 ==================== -->
+        <Rectangle Grid.Row="13" Grid.ColumnSpan="2" Style="{StaticResource SlotCard}"/>
+        <ComboBox x:Name="Mannschaft7" Grid.Row="13" Grid.Column="0" Margin="8"
+                  ItemTemplate="{StaticResource TeamItemTemplate}"
+                  ItemContainerStyle="{StaticResource TeamSlotItemContainerStyle}"
+                  SelectedValuePath="Team.Name"
+                  SelectionChanged="Slot_SelectionChanged"/>
+        <Label Content="-" Name="lblTore7" Style="{StaticResource ScoreLabel}"
+               Grid.Row="13" Grid.Column="1"/>
 
-    <Rectangle Grid.Row="10" Grid.Column="2" Fill="AliceBlue" />
-    <Label Content="Gewinner Spiel:" Grid.Row="10" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center" Height="32" Margin="10,10,0,12" Width="123" FontSize="15" FontWeight="Bold"/>
-    <Label Content="-" Name="lblErsteGewinner3" Grid.Row="10" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,69,14" Height="30" Width="133"/>
-    <Label Content="-" Name="lblErsteGewinner3Tore" Grid.Column="2" HorizontalAlignment="Left" Margin="288,10,0,0" Grid.Row="10" VerticalAlignment="Top" Height="32" Width="43"/>
+        <!-- ==================== Slot 8 ==================== -->
+        <Rectangle Grid.Row="15" Grid.ColumnSpan="2" Style="{StaticResource SlotCard}"/>
+        <ComboBox x:Name="Mannschaft8" Grid.Row="15" Grid.Column="0" Margin="8"
+                  ItemTemplate="{StaticResource TeamItemTemplate}"
+                  ItemContainerStyle="{StaticResource TeamSlotItemContainerStyle}"
+                  SelectedValuePath="Team.Name"
+                  SelectionChanged="Slot_SelectionChanged"/>
+        <Label Content="-" Name="lblTore8" Style="{StaticResource ScoreLabel}"
+               Grid.Row="15" Grid.Column="1"/>
 
-    <Rectangle Grid.Row="14" Grid.Column="2" Fill="AliceBlue" />
-    <Label Content="Gewinner Spiel:" Grid.Row="14" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center" Height="32" Margin="10,10,0,12" Width="123" FontSize="15" FontWeight="Bold"/>
-    <Label Content="-" Name="lblErsteGewinner4" Grid.Row="14" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,69,14" Height="30" Width="133"/>
-    <Label Content="-" Name="lblErsteGewinner4Tore" Grid.Column="2" HorizontalAlignment="Left" Margin="288,10,0,0" Grid.Row="14" VerticalAlignment="Top" Height="32" Width="43"/>
+        <!-- ==================== Round 1 winners ==================== -->
+        <Rectangle Grid.Row="2" Grid.Column="2" Style="{StaticResource BracketCard}"/>
+        <Label Content="Gewinner Spiel 1" Grid.Row="2" Grid.Column="2"
+               Style="{StaticResource HeadingLabel}"
+               HorizontalAlignment="Left" Margin="14,0,0,0"/>
+        <Label Content="-" Name="lblErsteGewinner1" Grid.Row="2" Grid.Column="2"
+               Style="{StaticResource WinnerNameLabel}"
+               HorizontalAlignment="Right" Margin="0,0,56,0"/>
+        <Label Content="-" Name="lblErsteGewinner1Tore" Grid.Row="2" Grid.Column="2"
+               Style="{StaticResource ScoreLabel}"
+               HorizontalAlignment="Right" Margin="0,0,14,0" Width="36"/>
 
-    <!-- Final -->
-    <Rectangle Grid.Row="4" Grid.Column="3" Fill="AliceBlue" />
-    <Label Content="Gewinner HF 1:" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Left" VerticalAlignment="Center" Height="32" Margin="10,10,0,12" Width="123" FontSize="15" FontWeight="Bold"/>
-    <Label Content="-" Name="lblFinal1" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,69,14" Height="30" Width="133"/>
-    <Label Content="-" Name="lblFinal1Tore" Grid.Column="3" HorizontalAlignment="Left" Margin="288,10,0,0" Grid.Row="4" VerticalAlignment="Top" Height="32" Width="43"/>
+        <Rectangle Grid.Row="6" Grid.Column="2" Style="{StaticResource BracketCard}"/>
+        <Label Content="Gewinner Spiel 2" Grid.Row="6" Grid.Column="2"
+               Style="{StaticResource HeadingLabel}"
+               HorizontalAlignment="Left" Margin="14,0,0,0"/>
+        <Label Content="-" Name="lblErsteGewinner2" Grid.Row="6" Grid.Column="2"
+               Style="{StaticResource WinnerNameLabel}"
+               HorizontalAlignment="Right" Margin="0,0,56,0"/>
+        <Label Content="-" Name="lblErsteGewinner2Tore" Grid.Row="6" Grid.Column="2"
+               Style="{StaticResource ScoreLabel}"
+               HorizontalAlignment="Right" Margin="0,0,14,0" Width="36"/>
 
-    <Rectangle Grid.Row="12" Grid.Column="3" Fill="AliceBlue" />
-    <Label Content="Gewinner HF 2:" Grid.Row="12" Grid.Column="3" HorizontalAlignment="Left" VerticalAlignment="Center" Height="32" Margin="10,10,0,12" Width="123" FontSize="15" FontWeight="Bold"/>
-    <Label Content="-" Name="lblFinal2" Grid.Row="12" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,69,14" Height="30" Width="133"/>
-    <Label Content="-" Name="lblFinal2Tore" Grid.Column="3" HorizontalAlignment="Left" Margin="288,10,0,0" Grid.Row="12" VerticalAlignment="Top" Height="32" Width="43"/>
+        <Rectangle Grid.Row="10" Grid.Column="2" Style="{StaticResource BracketCard}"/>
+        <Label Content="Gewinner Spiel 3" Grid.Row="10" Grid.Column="2"
+               Style="{StaticResource HeadingLabel}"
+               HorizontalAlignment="Left" Margin="14,0,0,0"/>
+        <Label Content="-" Name="lblErsteGewinner3" Grid.Row="10" Grid.Column="2"
+               Style="{StaticResource WinnerNameLabel}"
+               HorizontalAlignment="Right" Margin="0,0,56,0"/>
+        <Label Content="-" Name="lblErsteGewinner3Tore" Grid.Row="10" Grid.Column="2"
+               Style="{StaticResource ScoreLabel}"
+               HorizontalAlignment="Right" Margin="0,0,14,0" Width="36"/>
 
-    <!-- Sieger -->
-    <Rectangle Grid.Row="8" Grid.Column="4" Fill="AliceBlue" />
-    <Label Content="Sieger:" Grid.Row="8" Grid.Column="4" HorizontalAlignment="Left" VerticalAlignment="Center" Height="39" Margin="10,5,0,10" Width="158" FontSize="20" FontWeight="Bold"/>
-    <Label Content="-" Name="lblSieger" Grid.Row="8" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,52,13" Height="30" Width="135"/>
+        <Rectangle Grid.Row="14" Grid.Column="2" Style="{StaticResource BracketCard}"/>
+        <Label Content="Gewinner Spiel 4" Grid.Row="14" Grid.Column="2"
+               Style="{StaticResource HeadingLabel}"
+               HorizontalAlignment="Left" Margin="14,0,0,0"/>
+        <Label Content="-" Name="lblErsteGewinner4" Grid.Row="14" Grid.Column="2"
+               Style="{StaticResource WinnerNameLabel}"
+               HorizontalAlignment="Right" Margin="0,0,56,0"/>
+        <Label Content="-" Name="lblErsteGewinner4Tore" Grid.Row="14" Grid.Column="2"
+               Style="{StaticResource ScoreLabel}"
+               HorizontalAlignment="Right" Margin="0,0,14,0" Width="36"/>
 
-    <!-- Simulation -->
-    <Button x:Name="btnSimulieren" Click="btnSimulieren_Click" Content="Simulieren" FontSize="20" Grid.Column="3" HorizontalAlignment="Left" Margin="10,10,0,0" Grid.Row="15" VerticalAlignment="Top" Width="311" Height="33"/>
+        <!-- ==================== Semifinals ==================== -->
+        <Rectangle Grid.Row="4" Grid.Column="3" Style="{StaticResource BracketCard}"/>
+        <Label Content="Gewinner HF 1" Grid.Row="4" Grid.Column="3"
+               Style="{StaticResource HeadingLabel}"
+               HorizontalAlignment="Left" Margin="14,0,0,0"/>
+        <Label Content="-" Name="lblFinal1" Grid.Row="4" Grid.Column="3"
+               Style="{StaticResource WinnerNameLabel}"
+               HorizontalAlignment="Right" Margin="0,0,56,0"/>
+        <Label Content="-" Name="lblFinal1Tore" Grid.Row="4" Grid.Column="3"
+               Style="{StaticResource ScoreLabel}"
+               HorizontalAlignment="Right" Margin="0,0,14,0" Width="36"/>
 
-  </Grid>
+        <Rectangle Grid.Row="12" Grid.Column="3" Style="{StaticResource BracketCard}"/>
+        <Label Content="Gewinner HF 2" Grid.Row="12" Grid.Column="3"
+               Style="{StaticResource HeadingLabel}"
+               HorizontalAlignment="Left" Margin="14,0,0,0"/>
+        <Label Content="-" Name="lblFinal2" Grid.Row="12" Grid.Column="3"
+               Style="{StaticResource WinnerNameLabel}"
+               HorizontalAlignment="Right" Margin="0,0,56,0"/>
+        <Label Content="-" Name="lblFinal2Tore" Grid.Row="12" Grid.Column="3"
+               Style="{StaticResource ScoreLabel}"
+               HorizontalAlignment="Right" Margin="0,0,14,0" Width="36"/>
+
+        <!-- ==================== Champion ==================== -->
+        <Rectangle Grid.Row="8" Grid.Column="4" Style="{StaticResource BracketCard}"/>
+        <Label Content="Sieger" Grid.Row="8" Grid.Column="4"
+               Style="{StaticResource ChampionLabel}"
+               HorizontalAlignment="Left" Margin="14,0,0,0"/>
+        <Label Content="-" Name="lblSieger" Grid.Row="8" Grid.Column="4"
+               Style="{StaticResource ChampionLabel}"
+               HorizontalAlignment="Right" Margin="0,0,14,0"/>
+
+        <!-- ==================== Simulation button ==================== -->
+        <Button x:Name="btnSimulieren"
+                Click="btnSimulieren_Click"
+                Content="Simulieren"
+                Grid.Row="15" Grid.Column="3" Grid.ColumnSpan="2"
+                Margin="8"/>
+    </Grid>
 </Window>

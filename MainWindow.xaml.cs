@@ -1,122 +1,204 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Turnierspielplan
 {
-  /// <summary>
-  /// Interaktionslogik für MainWindow.xaml
-  /// </summary>
-  public partial class MainWindow : Window
-  {
-    public MainWindow()
+    public partial class MainWindow : Window
     {
-      InitializeComponent();
-    }
+        private sealed class Team
+        {
+            public string Name { get; set; }
+            public string ImagePath { get; set; }
+        }
 
-    private static int gedrückt = 0;
+        // A per-slot view of a team: same Team object, but IsAvailable is computed
+        // against the slot this item will appear in. Bound from the DataTemplate.
+        private sealed class TeamSlotItem
+        {
+            public Team Team { get; set; }
+            public bool IsAvailable { get; set; }
+            public int UsedInSlotIndex { get; set; } = -1;
 
-        private List<string> availableTeams = new List<string> { "Barcelona", "Real Madrid", "Bayern Munich", "Paris Saint-Germain", "Atletico Madrid", "Juventus", "Manchester City", "Chelsea" };
+            public string Name => Team.Name;
+            public string ImagePath => Team.ImagePath;
+            public string StatusText => IsAvailable ? string.Empty : $"in Slot {UsedInSlotIndex + 1}";
+        }
+
+        private static readonly Random _rng = new Random();
+
+        private readonly List<Team> _allTeams = new List<Team>
+        {
+            new Team { Name = "Barcelona",            ImagePath = "/Turnierspielplan;component/images/barca.png"    },
+            new Team { Name = "Real Madrid",          ImagePath = "/Turnierspielplan;component/images/real.png"     },
+            new Team { Name = "Bayern Munich",        ImagePath = "/Turnierspielplan;component/images/bayern.png"   },
+            new Team { Name = "Paris Saint-Germain",  ImagePath = "/Turnierspielplan;component/images/paris.png"    },
+            new Team { Name = "Atletico Madrid",      ImagePath = "/Turnierspielplan;component/images/atletico.png" },
+            new Team { Name = "Juventus",             ImagePath = "/Turnierspielplan;component/images/juventus.jpg" },
+            new Team { Name = "Manchester City",      ImagePath = "/Turnierspielplan;component/images/mancity.png"  },
+            new Team { Name = "Chelsea",              ImagePath = "/Turnierspielplan;component/images/chelsea.png"  },
+        };
+
+        private ComboBox[] _slots;
+        private bool _refreshing;
+        private int _simulationStage;
+
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            _slots = new[]
+            {
+                Mannschaft1, Mannschaft2, Mannschaft3, Mannschaft4,
+                Mannschaft5, Mannschaft6, Mannschaft7, Mannschaft8
+            };
+
+            RefreshAllSlots();
+        }
+
+        // ----------------------------------------------------------------
+        // Centralized selection state management
+        // ----------------------------------------------------------------
+
+        private void Slot_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_refreshing) return;
+            RefreshAllSlots();
+        }
+
+        /// <summary>
+        /// Rebuilds every slot's item list from the single source of truth
+        /// (<see cref="_allTeams"/> + current SelectedValue of every slot).
+        /// Each team appears in every slot, but is disabled in slots where it
+        /// is already used elsewhere. Deselecting/replacing a team in one slot
+        /// immediately re-enables it everywhere else.
+        /// </summary>
+        private void RefreshAllSlots()
+        {
+            _refreshing = true;
+            try
+            {
+                // Snapshot of "team name -> slot index that owns it" before rebuilding.
+                var owners = new Dictionary<string, int>();
+                for (int i = 0; i < _slots.Length; i++)
+                {
+                    var name = _slots[i].SelectedValue as string;
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        owners[name] = i;
+                    }
+                }
+
+                for (int i = 0; i < _slots.Length; i++)
+                {
+                    var slot = _slots[i];
+                    var currentName = slot.SelectedValue as string;
+
+                    var items = new List<TeamSlotItem>(_allTeams.Count);
+                    foreach (var team in _allTeams)
+                    {
+                        int ownerIndex;
+                        bool ownedByOther = owners.TryGetValue(team.Name, out ownerIndex)
+                                            && ownerIndex != i;
+                        items.Add(new TeamSlotItem
+                        {
+                            Team = team,
+                            IsAvailable = !ownedByOther,
+                            UsedInSlotIndex = ownedByOther ? ownerIndex : -1,
+                        });
+                    }
+
+                    slot.ItemsSource = items;
+
+                    if (currentName != null)
+                    {
+                        slot.SelectedItem = items.FirstOrDefault(it => it.Team.Name == currentName);
+                    }
+                }
+            }
+            finally
+            {
+                _refreshing = false;
+            }
+        }
+
+        // ----------------------------------------------------------------
+        // Simulation (unchanged behavior)
+        // ----------------------------------------------------------------
 
         private void btnSimulieren_Click(object sender, RoutedEventArgs e)
         {
-            // Increase the button press count
-            gedrückt++;
+            _simulationStage++;
 
-            // Change button content based on press count
-            string btnContent = "";
-            switch (gedrückt)
+            string nextLabel;
+            switch (_simulationStage)
             {
                 case 1:
-                    btnContent = "Wer kommt in den Final?";
-                    if (Mannschaft1.SelectedValue != null && Mannschaft2.SelectedValue != null &&
-                        Mannschaft3.SelectedValue != null && Mannschaft4.SelectedValue != null &&
-                        Mannschaft5.SelectedValue != null && Mannschaft6.SelectedValue != null &&
-                        Mannschaft7.SelectedValue != null && Mannschaft8.SelectedValue != null)
+                    if (!AllSlotsSelected())
                     {
-                        SimulateMatch(Mannschaft1.SelectedValue.ToString(), Mannschaft2.SelectedValue.ToString(), lblTore1, lblTore2);
-                        SimulateMatch(Mannschaft3.SelectedValue.ToString(), Mannschaft4.SelectedValue.ToString(), lblTore3, lblTore4);
-                        SimulateMatch(Mannschaft5.SelectedValue.ToString(), Mannschaft6.SelectedValue.ToString(), lblTore5, lblTore6);
-                        SimulateMatch(Mannschaft7.SelectedValue.ToString(), Mannschaft8.SelectedValue.ToString(), lblTore7, lblTore8);
+                        MessageBox.Show(
+                            "Bitte wählen Sie alle Mannschaften aus.",
+                            "Fehlende Auswahl",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+                        _simulationStage--;
+                        return;
                     }
-                    else
-                    {
-                        // Display an error message
-                        MessageBox.Show("Bitte wählen Sie alle Mannschaften aus.", "Fehlende Auswahl", MessageBoxButton.OK, MessageBoxImage.Error);
-                        gedrückt--;
-                    }
+                    SimulateMatch(Mannschaft1.SelectedValue.ToString(), Mannschaft2.SelectedValue.ToString(), lblTore1, lblTore2);
+                    SimulateMatch(Mannschaft3.SelectedValue.ToString(), Mannschaft4.SelectedValue.ToString(), lblTore3, lblTore4);
+                    SimulateMatch(Mannschaft5.SelectedValue.ToString(), Mannschaft6.SelectedValue.ToString(), lblTore5, lblTore6);
+                    SimulateMatch(Mannschaft7.SelectedValue.ToString(), Mannschaft8.SelectedValue.ToString(), lblTore7, lblTore8);
+                    nextLabel = "Wer kommt in den Final?";
+                    LockSlots(true);
                     break;
+
                 case 2:
-                    btnContent = "Wer ist der Sieger?";
-                    if (lblErsteGewinner1.Content != null && lblErsteGewinner2.Content != null &&
-                        lblErsteGewinner3.Content != null && lblErsteGewinner4.Content != null)
-                    {
-                        SimulateMatch(lblErsteGewinner1.Content.ToString(), lblErsteGewinner2.Content.ToString(), lblErsteGewinner1Tore, lblErsteGewinner2Tore);
-                        SimulateMatch(lblErsteGewinner3.Content.ToString(), lblErsteGewinner4.Content.ToString(), lblErsteGewinner3Tore, lblErsteGewinner4Tore);
-                    }
-                    else
-                    {
-                        // Handle the case where not all values are selected
-                        // Maybe display an error message or take appropriate action
-                    }
+                    SimulateMatch(lblErsteGewinner1.Content?.ToString(), lblErsteGewinner2.Content?.ToString(), lblErsteGewinner1Tore, lblErsteGewinner2Tore);
+                    SimulateMatch(lblErsteGewinner3.Content?.ToString(), lblErsteGewinner4.Content?.ToString(), lblErsteGewinner3Tore, lblErsteGewinner4Tore);
+                    nextLabel = "Wer ist der Sieger?";
                     break;
+
                 case 3:
-                    btnContent = "Fertig";
-                    if (lblFinal1.Content != null && lblFinal2.Content != null)
-                    {
-                        SimulateMatch(lblFinal1.Content.ToString(), lblFinal2.Content.ToString(), lblFinal1Tore, lblFinal2Tore);
-                    }
-                    else
-                    {
-                        // Handle the case where not all values are selected
-                        // Maybe display an error message or take appropriate action
-                    }
+                    SimulateMatch(lblFinal1.Content?.ToString(), lblFinal2.Content?.ToString(), lblFinal1Tore, lblFinal2Tore);
+                    DetermineWinner();
+                    nextLabel = "Fertig";
+                    btnSimulieren.IsEnabled = false;
                     break;
+
+                default:
+                    return;
             }
 
-            btnSimulieren.Content = btnContent;
-            if (gedrückt == 3)
+            btnSimulieren.Content = nextLabel;
+        }
+
+        private bool AllSlotsSelected()
+        {
+            return _slots.All(s => s.SelectedValue != null);
+        }
+
+        private void LockSlots(bool locked)
+        {
+            foreach (var slot in _slots)
             {
-                DetermineWinner();
+                slot.IsEnabled = !locked;
             }
         }
 
         private void SimulateMatch(string team1, string team2, Label lblTeam1Score, Label lblTeam2Score)
         {
-            Random rnd = new Random();
-            int score1 = rnd.Next(11);
-            int score2 = rnd.Next(11);
+            int score1 = _rng.Next(11);
+            int score2 = _rng.Next(11);
 
             if (score1 == score2)
             {
-                int equal = rnd.Next(3);
-                if (equal == 0 && score1 > 0)
-                {
-                    score1--;
-                }
-                else if (equal == 1 && score2 > 0)
-                {
-                    score2--;
-                }
-                else if (equal == 2)
-                {
-                    score1++;
-                }
-                else
-                {
-                    score2++;
-                }
+                int tieBreaker = _rng.Next(4);
+                if      (tieBreaker == 0 && score1 > 0) score1--;
+                else if (tieBreaker == 1 && score2 > 0) score2--;
+                else if (tieBreaker == 2)               score1++;
+                else                                    score2++;
             }
 
             lblTeam1Score.Content = score1.ToString();
@@ -125,1281 +207,12 @@ namespace Turnierspielplan
 
         private void DetermineWinner()
         {
-            string final1 = lblFinal1.Content.ToString();
-            string final2 = lblFinal2.Content.ToString();
-            int score1 = int.Parse(lblFinal1Tore.Content.ToString());
-            int score2 = int.Parse(lblFinal2Tore.Content.ToString());
-
-            if (score1 < score2)
-            {
-                lblSieger.Content = final2;
-            }
-            else if (score1 > score2)
-            {
-                lblSieger.Content = final1;
-            }
-        }
-
-
-        public void Mannschaft1_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-
-            List<int> mannschaften = new List<int>();
-            mannschaften.Add(0);
-            mannschaften.Add(1);
-            mannschaften.Add(2);
-            mannschaften.Add(3);
-            mannschaften.Add(4);
-            mannschaften.Add(5);
-            mannschaften.Add(6);
-            mannschaften.Add(7);
-
-            var selectedItem = e.AddedItems[0] as ComboBoxItem;
-            var itemStackPanel = selectedItem.Content as StackPanel;
-
-            // Get the TextBlock object from 'itemStackPanel' object
-            // TextBlock is with index 1 because it is defined second
-            //  after Image inside the StackPanel in your XAML
-            var textBlock = itemStackPanel.Children[1] as TextBlock;
-            // This variable will hold 'Engineer' or 'Manager'
-            var selectedText = textBlock.Text;
-
-            // MessageBox.Show("Ausgewählt: " + selectedText);
-
-            if (selectedText == "Barcelona")
-            {
-                int index = Mannschaft1.Items.IndexOf("Barcelona");
-
-                Mannschaft2.Items.RemoveAt(Mannschaft1.SelectedIndex);
-                Mannschaft3.Items.Remove(selectedText);
-                Mannschaft4.Items.Remove(selectedText);
-                Mannschaft5.Items.Remove(selectedText);
-                Mannschaft6.Items.Remove(selectedText);
-                Mannschaft7.Items.Remove(selectedText);
-                Mannschaft8.Items.Remove(selectedText);
-            }
-            else if (selectedText == "Real Madrid")
-            {
-                Mannschaft2.Items.RemoveAt(mannschaften[1]);
-                Mannschaft3.Items.RemoveAt(mannschaften[1]);
-                Mannschaft4.Items.RemoveAt(mannschaften[1]);
-                Mannschaft5.Items.RemoveAt(mannschaften[1]);
-                Mannschaft6.Items.RemoveAt(mannschaften[1]);
-                Mannschaft7.Items.RemoveAt(mannschaften[1]);
-                Mannschaft8.Items.RemoveAt(mannschaften[1]);
-            }
-            else if (selectedText == "Bayern Munich")
-            {
-                Mannschaft2.Items.RemoveAt(mannschaften[2]);
-                Mannschaft3.Items.RemoveAt(mannschaften[2]);
-                Mannschaft4.Items.RemoveAt(mannschaften[2]);
-                Mannschaft5.Items.RemoveAt(mannschaften[2]);
-                Mannschaft6.Items.RemoveAt(mannschaften[2]);
-                Mannschaft7.Items.RemoveAt(mannschaften[2]);
-                Mannschaft8.Items.RemoveAt(mannschaften[2]);
-            }
-            else if (selectedText == "Paris Saint-Germain")
-            {
-                Mannschaft2.Items.RemoveAt(mannschaften[3]);
-                Mannschaft3.Items.RemoveAt(mannschaften[3]);
-                Mannschaft4.Items.RemoveAt(mannschaften[3]);
-                Mannschaft5.Items.RemoveAt(mannschaften[3]);
-                Mannschaft6.Items.RemoveAt(mannschaften[3]);
-                Mannschaft7.Items.RemoveAt(mannschaften[3]);
-                Mannschaft8.Items.RemoveAt(mannschaften[3]);
-            }
-            else if (selectedText == "Atletico Madrid")
-            {
-
-            }
-            else if (selectedText == "Juventus")
-            {
-
-            }
-            else if (selectedText == "Manchester City")
-            {
-
-            }
-            else if (selectedText == "Chelsea")
-            {
-
-            }
-        }
-
-        private void Mannschaft2_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {/*
-      var selectedItem = e.AddedItems[0] as ComboBoxItem;
-      var itemStackPanel = selectedItem.Content as StackPanel;
-
-      // Get the TextBlock object from 'itemStackPanel' object
-      // TextBlock is with index 1 because it is defined second
-      //  after Image inside the StackPanel in your XAML
-      var textBlock = itemStackPanel.Children[1] as TextBlock;
-      // This variable will hold 'Engineer' or 'Manager'
-      var selectedText = textBlock.Text;
-
-      MessageBox.Show("Ausgewählt: " + selectedText);*/
-            var selectedItem = e.AddedItems[0] as ComboBoxItem;
-            var itemStackPanel = selectedItem.Content as StackPanel;
-            var Barcelona = 0;
-            var Real_Madrid = 1;
-            var Bayern_Munich = 2;
-            var Paris_St_Germain = 3;
-            var Atletico_Madrid = 4;
-            var Juventus = 5;
-            var Manchester_City = 6;
-            var Chelsea = 7;
-
-            // Get the TextBlock object from 'itemStackPanel' object
-            // TextBlock is with index 1 because it is defined second
-            //  after Image inside the StackPanel in your XAML
-            var textBlock = itemStackPanel.Children[1] as TextBlock;
-            // This variable will hold 'Engineer' or 'Manager'
-            var selectedText = textBlock.Text;
-
-            //MessageBox.Show("Ausgewählt: " + selectedText);
-
-            if (selectedText == "Barcelona")
-            {
-                Mannschaft1.Items.RemoveAt(Barcelona);
-                Mannschaft3.Items.RemoveAt(Barcelona);
-                Mannschaft4.Items.RemoveAt(Barcelona);
-                Mannschaft5.Items.RemoveAt(Barcelona);
-                Mannschaft6.Items.RemoveAt(Barcelona);
-                Mannschaft7.Items.RemoveAt(Barcelona);
-                Mannschaft8.Items.RemoveAt(Barcelona);
-            }
-            else if (selectedText == "Real Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Real_Madrid);
-                Mannschaft3.Items.RemoveAt(Real_Madrid);
-                Mannschaft4.Items.RemoveAt(Real_Madrid);
-                Mannschaft5.Items.RemoveAt(Real_Madrid);
-                Mannschaft6.Items.RemoveAt(Real_Madrid);
-                Mannschaft7.Items.RemoveAt(Real_Madrid);
-                Mannschaft8.Items.RemoveAt(Real_Madrid);
-            }
-            else if (selectedText == "Bayern Munich")
-            {
-                Mannschaft1.Items.RemoveAt(Bayern_Munich);
-                Mannschaft3.Items.RemoveAt(Bayern_Munich);
-                Mannschaft4.Items.RemoveAt(Bayern_Munich);
-                Mannschaft5.Items.RemoveAt(Bayern_Munich);
-                Mannschaft6.Items.RemoveAt(Bayern_Munich);
-                Mannschaft7.Items.RemoveAt(Bayern_Munich);
-                Mannschaft8.Items.RemoveAt(Bayern_Munich);
-            }
-            else if (selectedText == "Paris Saint-Germain")
-            {
-                Mannschaft1.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft3.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft4.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft5.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft6.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft7.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft8.Items.RemoveAt(Paris_St_Germain);
-            }
-            else if (selectedText == "Atletico Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft3.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft4.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft5.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft6.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft7.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft8.Items.RemoveAt(Atletico_Madrid);
-            }
-            else if (selectedText == "Juventus")
-            {
-                Mannschaft1.Items.RemoveAt(Juventus);
-                Mannschaft3.Items.RemoveAt(Juventus);
-                Mannschaft4.Items.RemoveAt(Juventus);
-                Mannschaft5.Items.RemoveAt(Juventus);
-                Mannschaft6.Items.RemoveAt(Juventus);
-                Mannschaft7.Items.RemoveAt(Juventus);
-                Mannschaft8.Items.RemoveAt(Juventus);
-            }
-            else if (selectedText == "Manchester City")
-            {
-                Mannschaft1.Items.RemoveAt(Manchester_City);
-                Mannschaft3.Items.RemoveAt(Manchester_City);
-                Mannschaft4.Items.RemoveAt(Manchester_City);
-                Mannschaft5.Items.RemoveAt(Manchester_City);
-                Mannschaft6.Items.RemoveAt(Manchester_City);
-                Mannschaft7.Items.RemoveAt(Manchester_City);
-                Mannschaft8.Items.RemoveAt(Manchester_City);
-            }
-            else if (selectedText == "Chelsea")
-            {
-                Mannschaft1.Items.RemoveAt(Chelsea);
-                Mannschaft3.Items.RemoveAt(Chelsea);
-                Mannschaft4.Items.RemoveAt(Chelsea);
-                Mannschaft5.Items.RemoveAt(Chelsea);
-                Mannschaft6.Items.RemoveAt(Chelsea);
-                Mannschaft7.Items.RemoveAt(Chelsea);
-                Mannschaft8.Items.RemoveAt(Chelsea);
-            }
-        }
-
-        private void Mannschaft3_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {/*
-      var selectedItem = e.AddedItems[0] as ComboBoxItem;
-      var itemStackPanel = selectedItem.Content as StackPanel;
-
-      // Get the TextBlock object from 'itemStackPanel' object
-      // TextBlock is with index 1 because it is defined second
-      //  after Image inside the StackPanel in your XAML
-      var textBlock = itemStackPanel.Children[1] as TextBlock;
-      // This variable will hold 'Engineer' or 'Manager'
-      var selectedText = textBlock.Text;
-
-      MessageBox.Show("Ausgewählt: " + selectedText);*/
-            var selectedItem = e.AddedItems[0] as ComboBoxItem;
-            var itemStackPanel = selectedItem.Content as StackPanel;
-            var Barcelona = 0;
-            var Real_Madrid = 1;
-            var Bayern_Munich = 2;
-            var Paris_St_Germain = 3;
-            var Atletico_Madrid = 4;
-            var Juventus = 5;
-            var Manchester_City = 6;
-            var Chelsea = 7;
-
-            // Get the TextBlock object from 'itemStackPanel' object
-            // TextBlock is with index 1 because it is defined second
-            //  after Image inside the StackPanel in your XAML
-            var textBlock = itemStackPanel.Children[1] as TextBlock;
-            // This variable will hold 'Engineer' or 'Manager'
-            var selectedText = textBlock.Text;
-
-            //MessageBox.Show("Ausgewählt: " + selectedText);
-
-            if (selectedText == "Barcelona")
-            {
-                Mannschaft1.Items.RemoveAt(Barcelona);
-                Mannschaft2.Items.RemoveAt(Barcelona);
-                Mannschaft4.Items.RemoveAt(Barcelona);
-                Mannschaft5.Items.RemoveAt(Barcelona);
-                Mannschaft6.Items.RemoveAt(Barcelona);
-                Mannschaft7.Items.RemoveAt(Barcelona);
-                Mannschaft8.Items.RemoveAt(Barcelona);
-            }
-            else if (selectedText == "Real Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Real_Madrid);
-                Mannschaft2.Items.RemoveAt(Real_Madrid);
-                Mannschaft4.Items.RemoveAt(Real_Madrid);
-                Mannschaft5.Items.RemoveAt(Real_Madrid);
-                Mannschaft6.Items.RemoveAt(Real_Madrid);
-                Mannschaft7.Items.RemoveAt(Real_Madrid);
-                Mannschaft8.Items.RemoveAt(Real_Madrid);
-            }
-            else if (selectedText == "Bayern Munich")
-            {
-                Mannschaft1.Items.RemoveAt(Bayern_Munich);
-                Mannschaft2.Items.RemoveAt(Bayern_Munich);
-                Mannschaft4.Items.RemoveAt(Bayern_Munich);
-                Mannschaft5.Items.RemoveAt(Bayern_Munich);
-                Mannschaft6.Items.RemoveAt(Bayern_Munich);
-                Mannschaft7.Items.RemoveAt(Bayern_Munich);
-                Mannschaft8.Items.RemoveAt(Bayern_Munich);
-            }
-            else if (selectedText == "Paris Saint-Germain")
-            {
-                Mannschaft1.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft2.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft4.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft5.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft6.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft7.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft8.Items.RemoveAt(Paris_St_Germain);
-            }
-            else if (selectedText == "Atletico Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft2.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft4.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft5.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft6.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft7.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft8.Items.RemoveAt(Atletico_Madrid);
-            }
-            else if (selectedText == "Juventus")
-            {
-                Mannschaft1.Items.RemoveAt(Juventus);
-                Mannschaft2.Items.RemoveAt(Juventus);
-                Mannschaft4.Items.RemoveAt(Juventus);
-                Mannschaft5.Items.RemoveAt(Juventus);
-                Mannschaft6.Items.RemoveAt(Juventus);
-                Mannschaft7.Items.RemoveAt(Juventus);
-                Mannschaft8.Items.RemoveAt(Juventus);
-            }
-            else if (selectedText == "Manchester City")
-            {
-                Mannschaft1.Items.RemoveAt(Manchester_City);
-                Mannschaft2.Items.RemoveAt(Manchester_City);
-                Mannschaft4.Items.RemoveAt(Manchester_City);
-                Mannschaft5.Items.RemoveAt(Manchester_City);
-                Mannschaft6.Items.RemoveAt(Manchester_City);
-                Mannschaft7.Items.RemoveAt(Manchester_City);
-                Mannschaft8.Items.RemoveAt(Manchester_City);
-            }
-            else if (selectedText == "Chelsea")
-            {
-                Mannschaft1.Items.RemoveAt(Chelsea);
-                Mannschaft2.Items.RemoveAt(Chelsea);
-                Mannschaft4.Items.RemoveAt(Chelsea);
-                Mannschaft5.Items.RemoveAt(Chelsea);
-                Mannschaft6.Items.RemoveAt(Chelsea);
-                Mannschaft7.Items.RemoveAt(Chelsea);
-                Mannschaft8.Items.RemoveAt(Chelsea);
-            }
-        }
-
-        private void Mannschaft4_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {/*
-      var selectedItem = e.AddedItems[0] as ComboBoxItem;
-      var itemStackPanel = selectedItem.Content as StackPanel;
-
-      // Get the TextBlock object from 'itemStackPanel' object
-      // TextBlock is with index 1 because it is defined second
-      //  after Image inside the StackPanel in your XAML
-      var textBlock = itemStackPanel.Children[1] as TextBlock;
-      // This variable will hold 'Engineer' or 'Manager'
-      var selectedText = textBlock.Text;
-
-      MessageBox.Show("Ausgewählt: " + selectedText);*/
-            var selectedItem = e.AddedItems[0] as ComboBoxItem;
-            var itemStackPanel = selectedItem.Content as StackPanel;
-            var Barcelona = 0;
-            var Real_Madrid = 1;
-            var Bayern_Munich = 2;
-            var Paris_St_Germain = 3;
-            var Atletico_Madrid = 4;
-            var Juventus = 5;
-            var Manchester_City = 6;
-            var Chelsea = 7;
-
-            // Get the TextBlock object from 'itemStackPanel' object
-            // TextBlock is with index 1 because it is defined second
-            //  after Image inside the StackPanel in your XAML
-            var textBlock = itemStackPanel.Children[1] as TextBlock;
-            // This variable will hold 'Engineer' or 'Manager'
-            var selectedText = textBlock.Text;
-
-            //MessageBox.Show("Ausgewählt: " + selectedText);
-
-            if (selectedText == "Barcelona")
-            {
-                Mannschaft1.Items.RemoveAt(Barcelona);
-                Mannschaft2.Items.RemoveAt(Barcelona);
-                Mannschaft3.Items.RemoveAt(Barcelona);
-                Mannschaft5.Items.RemoveAt(Barcelona);
-                Mannschaft6.Items.RemoveAt(Barcelona);
-                Mannschaft7.Items.RemoveAt(Barcelona);
-                Mannschaft8.Items.RemoveAt(Barcelona);
-            }
-            else if (selectedText == "Real Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Real_Madrid);
-                Mannschaft2.Items.RemoveAt(Real_Madrid);
-                Mannschaft3.Items.RemoveAt(Real_Madrid);
-                Mannschaft5.Items.RemoveAt(Real_Madrid);
-                Mannschaft6.Items.RemoveAt(Real_Madrid);
-                Mannschaft7.Items.RemoveAt(Real_Madrid);
-                Mannschaft8.Items.RemoveAt(Real_Madrid);
-            }
-            else if (selectedText == "Bayern Munich")
-            {
-                Mannschaft1.Items.RemoveAt(Bayern_Munich);
-                Mannschaft2.Items.RemoveAt(Bayern_Munich);
-                Mannschaft3.Items.RemoveAt(Bayern_Munich);
-                Mannschaft5.Items.RemoveAt(Bayern_Munich);
-                Mannschaft6.Items.RemoveAt(Bayern_Munich);
-                Mannschaft7.Items.RemoveAt(Bayern_Munich);
-                Mannschaft8.Items.RemoveAt(Bayern_Munich);
-            }
-            else if (selectedText == "Paris Saint-Germain")
-            {
-                Mannschaft1.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft2.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft3.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft5.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft6.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft7.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft8.Items.RemoveAt(Paris_St_Germain);
-            }
-            else if (selectedText == "Atletico Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft2.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft3.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft5.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft6.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft7.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft8.Items.RemoveAt(Atletico_Madrid);
-            }
-            else if (selectedText == "Juventus")
-            {
-                Mannschaft1.Items.RemoveAt(Juventus);
-                Mannschaft2.Items.RemoveAt(Juventus);
-                Mannschaft3.Items.RemoveAt(Juventus);
-                Mannschaft5.Items.RemoveAt(Juventus);
-                Mannschaft6.Items.RemoveAt(Juventus);
-                Mannschaft7.Items.RemoveAt(Juventus);
-                Mannschaft8.Items.RemoveAt(Juventus);
-            }
-            else if (selectedText == "Manchester City")
-            {
-                Mannschaft1.Items.RemoveAt(Manchester_City);
-                Mannschaft2.Items.RemoveAt(Manchester_City);
-                Mannschaft3.Items.RemoveAt(Manchester_City);
-                Mannschaft5.Items.RemoveAt(Manchester_City);
-                Mannschaft6.Items.RemoveAt(Manchester_City);
-                Mannschaft7.Items.RemoveAt(Manchester_City);
-                Mannschaft8.Items.RemoveAt(Manchester_City);
-            }
-            else if (selectedText == "Chelsea")
-            {
-                Mannschaft1.Items.RemoveAt(Chelsea);
-                Mannschaft2.Items.RemoveAt(Chelsea);
-                Mannschaft3.Items.RemoveAt(Chelsea);
-                Mannschaft5.Items.RemoveAt(Chelsea);
-                Mannschaft6.Items.RemoveAt(Chelsea);
-                Mannschaft7.Items.RemoveAt(Chelsea);
-                Mannschaft8.Items.RemoveAt(Chelsea);
-            }
-        }
-
-        private void Mannschaft5_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {/*
-      var selectedItem = e.AddedItems[0] as ComboBoxItem;
-      var itemStackPanel = selectedItem.Content as StackPanel;
-
-      // Get the TextBlock object from 'itemStackPanel' object
-      // TextBlock is with index 1 because it is defined second
-      //  after Image inside the StackPanel in your XAML
-      var textBlock = itemStackPanel.Children[1] as TextBlock;
-      // This variable will hold 'Engineer' or 'Manager'
-      var selectedText = textBlock.Text;
-
-      MessageBox.Show("Ausgewählt: " + selectedText);*/
-            var selectedItem = e.AddedItems[0] as ComboBoxItem;
-            var itemStackPanel = selectedItem.Content as StackPanel;
-            var Barcelona = 0;
-            var Real_Madrid = 1;
-            var Bayern_Munich = 2;
-            var Paris_St_Germain = 3;
-            var Atletico_Madrid = 4;
-            var Juventus = 5;
-            var Manchester_City = 6;
-            var Chelsea = 7;
-
-            // Get the TextBlock object from 'itemStackPanel' object
-            // TextBlock is with index 1 because it is defined second
-            //  after Image inside the StackPanel in your XAML
-            var textBlock = itemStackPanel.Children[1] as TextBlock;
-            // This variable will hold 'Engineer' or 'Manager'
-            var selectedText = textBlock.Text;
-
-            //MessageBox.Show("Ausgewählt: " + selectedText);
-
-            if (selectedText == "Barcelona")
-            {
-                Mannschaft1.Items.RemoveAt(Barcelona);
-                Mannschaft2.Items.RemoveAt(Barcelona);
-                Mannschaft3.Items.RemoveAt(Barcelona);
-                Mannschaft4.Items.RemoveAt(Barcelona);
-                Mannschaft6.Items.RemoveAt(Barcelona);
-                Mannschaft7.Items.RemoveAt(Barcelona);
-                Mannschaft8.Items.RemoveAt(Barcelona);
-
-                Real_Madrid = 0;
-                Bayern_Munich = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Real Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Real_Madrid);
-                Mannschaft2.Items.RemoveAt(Real_Madrid);
-                Mannschaft3.Items.RemoveAt(Real_Madrid);
-                Mannschaft4.Items.RemoveAt(Real_Madrid);
-                Mannschaft6.Items.RemoveAt(Real_Madrid);
-                Mannschaft7.Items.RemoveAt(Real_Madrid);
-                Mannschaft8.Items.RemoveAt(Real_Madrid);
-
-                Barcelona = 0;
-                Bayern_Munich = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Bayern Munich")
-            {
-                Mannschaft1.Items.RemoveAt(Bayern_Munich);
-                Mannschaft2.Items.RemoveAt(Bayern_Munich);
-                Mannschaft3.Items.RemoveAt(Bayern_Munich);
-                Mannschaft4.Items.RemoveAt(Bayern_Munich);
-                Mannschaft6.Items.RemoveAt(Bayern_Munich);
-                Mannschaft7.Items.RemoveAt(Bayern_Munich);
-                Mannschaft8.Items.RemoveAt(Bayern_Munich);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Paris Saint-Germain")
-            {
-                Mannschaft1.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft2.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft3.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft4.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft6.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft7.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft8.Items.RemoveAt(Paris_St_Germain);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Atletico Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft2.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft3.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft4.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft6.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft7.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft8.Items.RemoveAt(Atletico_Madrid);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Juventus")
-            {
-                Mannschaft1.Items.RemoveAt(Juventus);
-                Mannschaft2.Items.RemoveAt(Juventus);
-                Mannschaft3.Items.RemoveAt(Juventus);
-                Mannschaft4.Items.RemoveAt(Juventus);
-                Mannschaft6.Items.RemoveAt(Juventus);
-                Mannschaft7.Items.RemoveAt(Juventus);
-                Mannschaft8.Items.RemoveAt(Juventus);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Manchester City")
-            {
-                Mannschaft1.Items.RemoveAt(Manchester_City);
-                Mannschaft2.Items.RemoveAt(Manchester_City);
-                Mannschaft3.Items.RemoveAt(Manchester_City);
-                Mannschaft4.Items.RemoveAt(Manchester_City);
-                Mannschaft6.Items.RemoveAt(Manchester_City);
-                Mannschaft7.Items.RemoveAt(Manchester_City);
-                Mannschaft8.Items.RemoveAt(Manchester_City);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Juventus = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Chelsea")
-            {
-                Mannschaft1.Items.RemoveAt(Chelsea);
-                Mannschaft2.Items.RemoveAt(Chelsea);
-                Mannschaft3.Items.RemoveAt(Chelsea);
-                Mannschaft4.Items.RemoveAt(Chelsea);
-                Mannschaft6.Items.RemoveAt(Chelsea);
-                Mannschaft7.Items.RemoveAt(Chelsea);
-                Mannschaft8.Items.RemoveAt(Chelsea);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Juventus = 5;
-                Manchester_City = 6;
-            }
-        }
-
-        private void Mannschaft6_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {/*
-      var selectedItem = e.AddedItems[0] as ComboBoxItem;
-      var itemStackPanel = selectedItem.Content as StackPanel;
-
-      // Get the TextBlock object from 'itemStackPanel' object
-      // TextBlock is with index 1 because it is defined second
-      //  after Image inside the StackPanel in your XAML
-      var textBlock = itemStackPanel.Children[1] as TextBlock;
-      // This variable will hold 'Engineer' or 'Manager'
-      var selectedText = textBlock.Text;
-
-      MessageBox.Show("Ausgewählt: " + selectedText);*/
-            var selectedItem = e.AddedItems[0] as ComboBoxItem;
-            var itemStackPanel = selectedItem.Content as StackPanel;
-            var Barcelona = 0;
-            var Real_Madrid = 1;
-            var Bayern_Munich = 2;
-            var Paris_St_Germain = 3;
-            var Atletico_Madrid = 4;
-            var Juventus = 5;
-            var Manchester_City = 6;
-            var Chelsea = 7;
-
-            // Get the TextBlock object from 'itemStackPanel' object
-            // TextBlock is with index 1 because it is defined second
-            //  after Image inside the StackPanel in your XAML
-            var textBlock = itemStackPanel.Children[1] as TextBlock;
-            // This variable will hold 'Engineer' or 'Manager'
-            var selectedText = textBlock.Text;
-
-            //MessageBox.Show("Ausgewählt: " + selectedText);
-
-            if (selectedText == "Barcelona")
-            {
-                Mannschaft1.Items.RemoveAt(Barcelona);
-                Mannschaft2.Items.RemoveAt(Barcelona);
-                Mannschaft3.Items.RemoveAt(Barcelona);
-                Mannschaft4.Items.RemoveAt(Barcelona);
-                Mannschaft5.Items.RemoveAt(Barcelona);
-                Mannschaft7.Items.RemoveAt(Barcelona);
-                Mannschaft8.Items.RemoveAt(Barcelona);
-
-                Real_Madrid = 0;
-                Bayern_Munich = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Real Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Real_Madrid);
-                Mannschaft2.Items.RemoveAt(Real_Madrid);
-                Mannschaft3.Items.RemoveAt(Real_Madrid);
-                Mannschaft4.Items.RemoveAt(Real_Madrid);
-                Mannschaft5.Items.RemoveAt(Real_Madrid);
-                Mannschaft7.Items.RemoveAt(Real_Madrid);
-                Mannschaft8.Items.RemoveAt(Real_Madrid);
-
-                Barcelona = 0;
-                Bayern_Munich = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Bayern Munich")
-            {
-                Mannschaft1.Items.RemoveAt(Bayern_Munich);
-                Mannschaft2.Items.RemoveAt(Bayern_Munich);
-                Mannschaft3.Items.RemoveAt(Bayern_Munich);
-                Mannschaft4.Items.RemoveAt(Bayern_Munich);
-                Mannschaft5.Items.RemoveAt(Bayern_Munich);
-                Mannschaft7.Items.RemoveAt(Bayern_Munich);
-                Mannschaft8.Items.RemoveAt(Bayern_Munich);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Paris Saint-Germain")
-            {
-                Mannschaft1.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft2.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft3.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft4.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft5.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft7.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft8.Items.RemoveAt(Paris_St_Germain);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Atletico Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft2.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft3.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft4.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft5.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft7.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft8.Items.RemoveAt(Atletico_Madrid);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Juventus")
-            {
-                Mannschaft1.Items.RemoveAt(Juventus);
-                Mannschaft2.Items.RemoveAt(Juventus);
-                Mannschaft3.Items.RemoveAt(Juventus);
-                Mannschaft4.Items.RemoveAt(Juventus);
-                Mannschaft5.Items.RemoveAt(Juventus);
-                Mannschaft7.Items.RemoveAt(Juventus);
-                Mannschaft8.Items.RemoveAt(Juventus);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Manchester City")
-            {
-                Mannschaft1.Items.RemoveAt(Manchester_City);
-                Mannschaft2.Items.RemoveAt(Manchester_City);
-                Mannschaft3.Items.RemoveAt(Manchester_City);
-                Mannschaft4.Items.RemoveAt(Manchester_City);
-                Mannschaft5.Items.RemoveAt(Manchester_City);
-                Mannschaft7.Items.RemoveAt(Manchester_City);
-                Mannschaft8.Items.RemoveAt(Manchester_City);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Juventus = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Chelsea")
-            {
-                Mannschaft1.Items.RemoveAt(Chelsea);
-                Mannschaft2.Items.RemoveAt(Chelsea);
-                Mannschaft3.Items.RemoveAt(Chelsea);
-                Mannschaft4.Items.RemoveAt(Chelsea);
-                Mannschaft5.Items.RemoveAt(Chelsea);
-                Mannschaft7.Items.RemoveAt(Chelsea);
-                Mannschaft8.Items.RemoveAt(Chelsea);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Juventus = 5;
-                Manchester_City = 6;
-            }
-        }
-
-        private void Mannschaft7_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {/*
-      var selectedItem = e.AddedItems[0] as ComboBoxItem;
-      var itemStackPanel = selectedItem.Content as StackPanel;
-
-      // Get the TextBlock object from 'itemStackPanel' object
-      // TextBlock is with index 1 because it is defined second
-      //  after Image inside the StackPanel in your XAML
-      var textBlock = itemStackPanel.Children[1] as TextBlock;
-      // This variable will hold 'Engineer' or 'Manager'
-      var selectedText = textBlock.Text;
-
-      MessageBox.Show("Ausgewählt: " + selectedText);*/
-            var selectedItem = e.AddedItems[0] as ComboBoxItem;
-            var itemStackPanel = selectedItem.Content as StackPanel;
-            var Barcelona = 0;
-            var Real_Madrid = 1;
-            var Bayern_Munich = 2;
-            var Paris_St_Germain = 3;
-            var Atletico_Madrid = 4;
-            var Juventus = 5;
-            var Manchester_City = 6;
-            var Chelsea = 7;
-
-            // Get the TextBlock object from 'itemStackPanel' object
-            // TextBlock is with index 1 because it is defined second
-            //  after Image inside the StackPanel in your XAML
-            var textBlock = itemStackPanel.Children[1] as TextBlock;
-            // This variable will hold 'Engineer' or 'Manager'
-            var selectedText = textBlock.Text;
-
-            //MessageBox.Show("Ausgewählt: " + selectedText);
-
-            if (selectedText == "Barcelona")
-            {
-                Mannschaft1.Items.RemoveAt(Barcelona);
-                Mannschaft2.Items.RemoveAt(Barcelona);
-                Mannschaft3.Items.RemoveAt(Barcelona);
-                Mannschaft4.Items.RemoveAt(Barcelona);
-                Mannschaft5.Items.RemoveAt(Barcelona);
-                Mannschaft6.Items.RemoveAt(Barcelona);
-                Mannschaft8.Items.RemoveAt(Barcelona);
-
-                Real_Madrid = 0;
-                Bayern_Munich = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Real Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Real_Madrid);
-                Mannschaft2.Items.RemoveAt(Real_Madrid);
-                Mannschaft3.Items.RemoveAt(Real_Madrid);
-                Mannschaft4.Items.RemoveAt(Real_Madrid);
-                Mannschaft5.Items.RemoveAt(Real_Madrid);
-                Mannschaft6.Items.RemoveAt(Real_Madrid);
-                Mannschaft8.Items.RemoveAt(Real_Madrid);
-
-                Barcelona = 0;
-                Bayern_Munich = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Bayern Munich")
-            {
-                Mannschaft1.Items.RemoveAt(Bayern_Munich);
-                Mannschaft2.Items.RemoveAt(Bayern_Munich);
-                Mannschaft3.Items.RemoveAt(Bayern_Munich);
-                Mannschaft4.Items.RemoveAt(Bayern_Munich);
-                Mannschaft5.Items.RemoveAt(Bayern_Munich);
-                Mannschaft6.Items.RemoveAt(Bayern_Munich);
-                Mannschaft8.Items.RemoveAt(Bayern_Munich);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Paris Saint-Germain")
-            {
-                Mannschaft1.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft2.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft3.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft4.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft5.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft6.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft8.Items.RemoveAt(Paris_St_Germain);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Atletico Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft2.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft3.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft4.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft5.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft6.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft8.Items.RemoveAt(Atletico_Madrid);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Juventus")
-            {
-                Mannschaft1.Items.RemoveAt(Juventus);
-                Mannschaft2.Items.RemoveAt(Juventus);
-                Mannschaft3.Items.RemoveAt(Juventus);
-                Mannschaft4.Items.RemoveAt(Juventus);
-                Mannschaft5.Items.RemoveAt(Juventus);
-                Mannschaft6.Items.RemoveAt(Juventus);
-                Mannschaft8.Items.RemoveAt(Juventus);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Manchester City")
-            {
-                Mannschaft1.Items.RemoveAt(Manchester_City);
-                Mannschaft2.Items.RemoveAt(Manchester_City);
-                Mannschaft3.Items.RemoveAt(Manchester_City);
-                Mannschaft4.Items.RemoveAt(Manchester_City);
-                Mannschaft5.Items.RemoveAt(Manchester_City);
-                Mannschaft6.Items.RemoveAt(Manchester_City);
-                Mannschaft8.Items.RemoveAt(Manchester_City);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Juventus = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Chelsea")
-            {
-                Mannschaft1.Items.RemoveAt(Chelsea);
-                Mannschaft2.Items.RemoveAt(Chelsea);
-                Mannschaft3.Items.RemoveAt(Chelsea);
-                Mannschaft4.Items.RemoveAt(Chelsea);
-                Mannschaft5.Items.RemoveAt(Chelsea);
-                Mannschaft6.Items.RemoveAt(Chelsea);
-                Mannschaft8.Items.RemoveAt(Chelsea);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Juventus = 5;
-                Manchester_City = 6;
-            }
-        }
-
-        private void Mannschaft8_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {/*
-      var selectedItem = e.AddedItems[0] as ComboBoxItem;
-      var itemStackPanel = selectedItem.Content as StackPanel;
-
-      // Get the TextBlock object from 'itemStackPanel' object
-      // TextBlock is with index 1 because it is defined second
-      //  after Image inside the StackPanel in your XAML
-      var textBlock = itemStackPanel.Children[1] as TextBlock;
-      // This variable will hold 'Engineer' or 'Manager'
-      var selectedText = textBlock.Text;
-
-      MessageBox.Show("Ausgewählt: " + selectedText);*/
-            var selectedItem = e.AddedItems[0] as ComboBoxItem;
-            var itemStackPanel = selectedItem.Content as StackPanel;
-            var Barcelona = 0;
-            var Real_Madrid = 1;
-            var Bayern_Munich = 2;
-            var Paris_St_Germain = 3;
-            var Atletico_Madrid = 4;
-            var Juventus = 5;
-            var Manchester_City = 6;
-            var Chelsea = 7;
-
-            // Get the TextBlock object from 'itemStackPanel' object
-            // TextBlock is with index 1 because it is defined second
-            //  after Image inside the StackPanel in your XAML
-            var textBlock = itemStackPanel.Children[1] as TextBlock;
-            // This variable will hold 'Engineer' or 'Manager'
-            var selectedText = textBlock.Text;
-
-            //MessageBox.Show("Ausgewählt: " + selectedText);
-
-            if (selectedText == "Barcelona")
-            {
-                Mannschaft1.Items.RemoveAt(Barcelona);
-                Mannschaft2.Items.RemoveAt(Barcelona);
-                Mannschaft3.Items.RemoveAt(Barcelona);
-                Mannschaft4.Items.RemoveAt(Barcelona);
-                Mannschaft5.Items.RemoveAt(Barcelona);
-                Mannschaft6.Items.RemoveAt(Barcelona);
-                Mannschaft7.Items.RemoveAt(Barcelona);
-
-                Real_Madrid = 0;
-                Bayern_Munich = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Real Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Real_Madrid);
-                Mannschaft2.Items.RemoveAt(Real_Madrid);
-                Mannschaft3.Items.RemoveAt(Real_Madrid);
-                Mannschaft4.Items.RemoveAt(Real_Madrid);
-                Mannschaft5.Items.RemoveAt(Real_Madrid);
-                Mannschaft6.Items.RemoveAt(Real_Madrid);
-                Mannschaft7.Items.RemoveAt(Real_Madrid);
-
-                Barcelona = 0;
-                Bayern_Munich = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Bayern Munich")
-            {
-                Mannschaft1.Items.RemoveAt(Bayern_Munich);
-                Mannschaft2.Items.RemoveAt(Bayern_Munich);
-                Mannschaft3.Items.RemoveAt(Bayern_Munich);
-                Mannschaft4.Items.RemoveAt(Bayern_Munich);
-                Mannschaft5.Items.RemoveAt(Bayern_Munich);
-                Mannschaft6.Items.RemoveAt(Bayern_Munich);
-                Mannschaft7.Items.RemoveAt(Bayern_Munich);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Paris_St_Germain = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Paris Saint-Germain")
-            {
-                Mannschaft1.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft2.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft3.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft4.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft5.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft6.Items.RemoveAt(Paris_St_Germain);
-                Mannschaft7.Items.RemoveAt(Paris_St_Germain);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Atletico_Madrid = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Atletico Madrid")
-            {
-                Mannschaft1.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft2.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft3.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft4.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft5.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft6.Items.RemoveAt(Atletico_Madrid);
-                Mannschaft7.Items.RemoveAt(Atletico_Madrid);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Juventus = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Juventus")
-            {
-                Mannschaft1.Items.RemoveAt(Juventus);
-                Mannschaft2.Items.RemoveAt(Juventus);
-                Mannschaft3.Items.RemoveAt(Juventus);
-                Mannschaft4.Items.RemoveAt(Juventus);
-                Mannschaft5.Items.RemoveAt(Juventus);
-                Mannschaft6.Items.RemoveAt(Juventus);
-                Mannschaft7.Items.RemoveAt(Juventus);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Manchester_City = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Manchester City")
-            {
-                Mannschaft1.Items.RemoveAt(Manchester_City);
-                Mannschaft2.Items.RemoveAt(Manchester_City);
-                Mannschaft3.Items.RemoveAt(Manchester_City);
-                Mannschaft4.Items.RemoveAt(Manchester_City);
-                Mannschaft5.Items.RemoveAt(Manchester_City);
-                Mannschaft6.Items.RemoveAt(Manchester_City);
-                Mannschaft7.Items.RemoveAt(Manchester_City);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Juventus = 5;
-                Chelsea = 6;
-            }
-            else if (selectedText == "Chelsea")
-            {
-                Mannschaft1.Items.RemoveAt(Chelsea);
-                Mannschaft2.Items.RemoveAt(Chelsea);
-                Mannschaft3.Items.RemoveAt(Chelsea);
-                Mannschaft4.Items.RemoveAt(Chelsea);
-                Mannschaft5.Items.RemoveAt(Chelsea);
-                Mannschaft6.Items.RemoveAt(Chelsea);
-                Mannschaft7.Items.RemoveAt(Chelsea);
-
-                Barcelona = 0;
-                Real_Madrid = 1;
-                Bayern_Munich = 2;
-                Paris_St_Germain = 3;
-                Atletico_Madrid = 4;
-                Juventus = 5;
-                Manchester_City = 6;
-            }
+            var final1 = lblFinal1.Content?.ToString();
+            var final2 = lblFinal2.Content?.ToString();
+            if (!int.TryParse(lblFinal1Tore.Content?.ToString(), out int score1)) return;
+            if (!int.TryParse(lblFinal2Tore.Content?.ToString(), out int score2)) return;
+
+            lblSieger.Content = score1 >= score2 ? final1 : final2;
         }
     }
 }
-/*
-  private void Mannschaft2_MouseLeave(object sender, MouseEventArgs e)
-  {
-    if (Mannschaft2.SelectedIndex > -1)
-    { //somthing was selected
-
-      Mannschaft1.Items.RemoveAt(Mannschaft2.SelectedIndex);
-      Mannschaft3.Items.RemoveAt(Mannschaft2.SelectedIndex);
-      Mannschaft4.Items.RemoveAt(Mannschaft2.SelectedIndex);
-      Mannschaft5.Items.RemoveAt(Mannschaft2.SelectedIndex);
-      Mannschaft6.Items.RemoveAt(Mannschaft2.SelectedIndex);
-      Mannschaft7.Items.RemoveAt(Mannschaft2.SelectedIndex);
-      Mannschaft8.Items.RemoveAt(Mannschaft2.SelectedIndex);
-      //selecteditem = Mannschaft1.SelectedItem.ToString();
-    }
-  }
-
-  private void Mannschaft3_MouseLeave(object sender, MouseEventArgs e)
-  {
-    if (Mannschaft3.SelectedIndex > -1)
-    { //somthing was selected
-
-      Mannschaft1.Items.RemoveAt(Mannschaft3.SelectedIndex);
-      Mannschaft2.Items.RemoveAt(Mannschaft3.SelectedIndex);
-      Mannschaft4.Items.RemoveAt(Mannschaft3.SelectedIndex);
-      Mannschaft5.Items.RemoveAt(Mannschaft3.SelectedIndex);
-      Mannschaft6.Items.RemoveAt(Mannschaft3.SelectedIndex);
-      Mannschaft7.Items.RemoveAt(Mannschaft3.SelectedIndex);
-      Mannschaft8.Items.RemoveAt(Mannschaft3.SelectedIndex);
-      //selecteditem = Mannschaft1.SelectedItem.ToString();
-    }
-  }
-
-  private void Mannschaft4_MouseLeave(object sender, MouseEventArgs e)
-  {
-    if (Mannschaft4.SelectedIndex > -1)
-    { //somthing was selected
-
-      Mannschaft1.Items.RemoveAt(Mannschaft4.SelectedIndex);
-      Mannschaft2.Items.RemoveAt(Mannschaft4.SelectedIndex);
-      Mannschaft3.Items.RemoveAt(Mannschaft4.SelectedIndex);
-      Mannschaft5.Items.RemoveAt(Mannschaft4.SelectedIndex);
-      Mannschaft6.Items.RemoveAt(Mannschaft4.SelectedIndex);
-      Mannschaft7.Items.RemoveAt(Mannschaft4.SelectedIndex);
-      Mannschaft8.Items.RemoveAt(Mannschaft4.SelectedIndex);
-      //selecteditem = Mannschaft1.SelectedItem.ToString();
-    }
-  }
-
-  private void Mannschaft5_MouseLeave(object sender, MouseEventArgs e)
-  {
-    if (Mannschaft5.SelectedIndex > -1)
-    { //somthing was selected
-
-      Mannschaft1.Items.RemoveAt(Mannschaft5.SelectedIndex);
-      Mannschaft2.Items.RemoveAt(Mannschaft5.SelectedIndex);
-      Mannschaft3.Items.RemoveAt(Mannschaft5.SelectedIndex);
-      Mannschaft4.Items.RemoveAt(Mannschaft5.SelectedIndex);
-      Mannschaft6.Items.RemoveAt(Mannschaft5.SelectedIndex);
-      Mannschaft7.Items.RemoveAt(Mannschaft5.SelectedIndex);
-      Mannschaft8.Items.RemoveAt(Mannschaft5.SelectedIndex);
-      //selecteditem = Mannschaft1.SelectedItem.ToString();
-    }
-  }
-
-  private void Mannschaft6_MouseLeave(object sender, MouseEventArgs e)
-  {
-    if (Mannschaft6.SelectedIndex > -1)
-    { //somthing was selected
-
-      Mannschaft1.Items.RemoveAt(Mannschaft6.SelectedIndex);
-      Mannschaft2.Items.RemoveAt(Mannschaft6.SelectedIndex);
-      Mannschaft3.Items.RemoveAt(Mannschaft6.SelectedIndex);
-      Mannschaft4.Items.RemoveAt(Mannschaft6.SelectedIndex);
-      Mannschaft5.Items.RemoveAt(Mannschaft6.SelectedIndex);
-      Mannschaft7.Items.RemoveAt(Mannschaft6.SelectedIndex);
-      Mannschaft8.Items.RemoveAt(Mannschaft6.SelectedIndex);
-      //selecteditem = Mannschaft1.SelectedItem.ToString();
-    }
-  }
-
-  private void Mannschaft7_MouseLeave(object sender, MouseEventArgs e)
-  {
-    if (Mannschaft7.SelectedIndex > -1)
-    { //somthing was selected
-
-      Mannschaft1.Items.RemoveAt(Mannschaft7.SelectedIndex);
-      Mannschaft2.Items.RemoveAt(Mannschaft7.SelectedIndex);
-      Mannschaft3.Items.RemoveAt(Mannschaft7.SelectedIndex);
-      Mannschaft4.Items.RemoveAt(Mannschaft7.SelectedIndex);
-      Mannschaft5.Items.RemoveAt(Mannschaft7.SelectedIndex);
-      Mannschaft6.Items.RemoveAt(Mannschaft7.SelectedIndex);
-      Mannschaft8.Items.RemoveAt(Mannschaft7.SelectedIndex);
-      //selecteditem = Mannschaft1.SelectedItem.ToString();
-    }
-  }
-
-  private void Mannschaft8_MouseLeave(object sender, MouseEventArgs e)
-  {
-    if (Mannschaft8.SelectedIndex > -1)
-    { //somthing was selected
-
-      Mannschaft1.Items.RemoveAt(Mannschaft8.SelectedIndex);
-      Mannschaft2.Items.RemoveAt(Mannschaft8.SelectedIndex);
-      Mannschaft3.Items.RemoveAt(Mannschaft8.SelectedIndex);
-      Mannschaft4.Items.RemoveAt(Mannschaft8.SelectedIndex);
-      Mannschaft5.Items.RemoveAt(Mannschaft8.SelectedIndex);
-      Mannschaft6.Items.RemoveAt(Mannschaft8.SelectedIndex);
-      Mannschaft7.Items.RemoveAt(Mannschaft8.SelectedIndex);
-      //selecteditem = Mannschaft1.SelectedItem.ToString();
-    }
-  }
-}
-}
-*/
